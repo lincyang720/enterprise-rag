@@ -21,8 +21,13 @@ from langgraph.graph import StateGraph, END
 from .config import LLM, RERANK, RET, OBS
 from . import rerank as rerank_mod
 from . import llm as llm_mod
+from . import store as store_mod
+from .llm import is_llm_ready
 from . import observability as obs
 from .retriever import HybridSearch
+from .utils import get_logger
+
+LOG = get_logger()
 
 # 全局懒加载检索器(图节点共享)
 _HYBRID: Optional[HybridSearch] = None
@@ -145,7 +150,7 @@ def run_rag(question: str, filter_rel_dir: str = None,
             filter_file_type: str = None, use_llm: bool = None) -> Dict:
     """便捷入口: 跑一遍图, 返回 {answer, sources, note, trace, question}"""
     if use_llm is None:
-        use_llm = bool(LLM.get("use_llm") and LLM.get("api_key"))
+        use_llm = is_llm_ready()
     t0 = time.perf_counter()
     result = GRAPH.invoke({
         "question": question,

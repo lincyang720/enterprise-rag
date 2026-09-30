@@ -28,11 +28,34 @@ def build_context(passages: list, per_passage_cap: int = 1500,
     return "\n\n".join(lines)
 
 
+def _api_key_usable(key) -> bool:
+    """过滤掉空值、非 ASCII、中文占位符等无效 key"""
+    if not key or not isinstance(key, str):
+        return False
+    if len(key) < 10:
+        return False
+    try:
+        key.encode("ascii")
+    except UnicodeEncodeError:
+        LOG.warning("LLM_API_KEY 包含非 ASCII 字符, 视为未配置")
+        return False
+    lowered = key.lower()
+    for marker in ("your", "placeholder", "填入", "example", "xxxxxxxx", "test", "fake"):
+        if marker in lowered:
+            LOG.warning("LLM_API_KEY 是占位符, 视为未配置")
+            return False
+    return True
+
+
+def is_llm_ready() -> bool:
+    return bool(LLM.get("use_llm") and _api_key_usable(LLM.get("api_key")))
+
+
 def answer_with_llm(query: str, passages: list):
     if not LLM.get("use_llm"):
         return None
-    if not LLM.get("api_key"):
-        LOG.warning("未配置 LLM_API_KEY, 仅返回检索片段")
+    if not _api_key_usable(LLM.get("api_key")):
+        LOG.warning("未配置有效的 LLM_API_KEY, 仅返回检索片段")
         return None
     try:
         from langchain_openai import ChatOpenAI

@@ -16,6 +16,8 @@ from src import store
 from src import rag_graph
 from src import eval as eval_mod
 from src import observability as obs_mod
+from src.llm import is_llm_ready
+from src.utils import get_logger
 
 st.set_page_config(page_title="bjhc 公司知识库问答", page_icon="📚", layout="wide")
 
@@ -31,7 +33,7 @@ try:
 except Exception:
     st.sidebar.warning("索引库未初始化, 请先运行入库")
 
-llm_on = bool(LLM.get("use_llm") and LLM.get("api_key"))
+llm_on = is_llm_ready()
 st.sidebar.markdown(
     f"**大模型答案**: {'✅ 已开启' if llm_on else '⚠️ 未配置(仅检索)'}")
 st.sidebar.markdown("**检索**: BM25 + 向量余弦 + 重排序")
@@ -45,6 +47,20 @@ if st.sidebar.button("🔄 重建 BM25 缓存"):
     except Exception as e:
         st.sidebar.error(f"重建失败: {e}")
 st.sidebar.caption("索引扩充后点此, 让关键词检索覆盖新入库内容。")
+
+# 预热模型：把首次 embedding + reranker 加载放在页面打开时，而不是用户提问后
+LOG = get_logger()
+if not st.session_state.get("_models_warmed"):
+    try:
+        with st.spinner("🚀 首次启动正在加载 embedding + 重排序模型，约需 30–90 秒，请稍候..."):
+            from src import embeddings as _emb, rerank as _rerank
+            _emb.get_model()
+            _rerank.get_model()
+        st.session_state._models_warmed = True
+        st.sidebar.success("模型加载完成，可以开始提问")
+    except Exception as e:
+        LOG.warning("模型预热失败: %s", e)
+        st.sidebar.warning(f"模型预热失败，首次提问时仍会尝试加载：{e}")
 
 # 过滤(仅问答页用)
 try:
