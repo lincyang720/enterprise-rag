@@ -217,6 +217,7 @@ def _judge_one(llm, metric: str, question: str, answer: str,
         f"【模型答案】\n{answer}\n\n"
         "请严格只输出 JSON。")
     try:
+        from langchain_core.messages import SystemMessage, HumanMessage
         resp = llm.invoke([SystemMessage(content=sys_msg),
                            HumanMessage(content=human)])
         txt = resp.content.strip()
