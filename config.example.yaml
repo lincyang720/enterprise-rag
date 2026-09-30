@@ -1,0 +1,125 @@
+# ============================================================
+#  bjhc 公司知识库 RAG 系统 - 示例配置 (config.example.yaml)
+#  用法: 复制为 config.yaml 后, 按需修改 source_dir 等字段
+#  说明: data 下路径均为相对项目根目录(可整体搬迁); 中文 BM25 用 jieba 分词; 模型默认走 hf-mirror 镜像
+# ============================================================
+
+data:
+  # ★ 改成你自己的资料根目录(本机绝对路径)。示例值仅作占位, 请替换为真实目录
+  source_dir: "D:/your_company_docs"
+  # 递归跳过这些目录(及其子目录)。示例: 排除不需要的目录
+  exclude_dirs: ["_private", "temp"]
+  # 排除的扩展名(软件/二进制/缓存/归档, 不入库)
+  # 注意: 通用归档(.zip/.rar/.7z 等)若当文本读会生成海量脏 chunk 污染索引, 必须排除
+  exclude_exts:
+    - ".exe"
+    - ".dll"
+    - ".class"
+    - ".apk"
+    - ".jar"
+    - ".msi"
+    - ".cab"
+    - ".cer"
+    - ".crt"
+    - ".key"
+    - ".pem"
+    - ".pfx"
+    - ".sys"
+    - ".so"
+    - ".pyc"
+    - ".lnk"
+    - ".tmp"
+    - ".bak"
+    - ".ds_store"
+    - ".bin"
+    - ".dat"
+    - ".wemtc"
+    - ".wemtv"
+    - ".wemta"
+    - ".wemtaidx"
+    - ".wemtvidx"
+    - ".nb3"
+    - ".b64"
+    - ".ddz"
+    - ".sds"
+    - ".risk"
+    - ".pt"
+    - ".cat"
+    - ".inf"
+    - ".cnf"
+    - ".rules"
+    - ".service"
+    - ".ttf"
+    - ".dmg"
+    - ".avi"
+    - ".mov"
+    - ".m4a"
+    - ".mp3"
+    - ".mp4"
+    - ".wav"
+    - ".bmp"
+    - ".zip"
+    - ".rar"
+    - ".7z"
+    - ".tar"
+    - ".gz"
+    - ".tgz"
+    - ".bz2"
+    - ".iso"
+    - ".img"
+    - ".war"
+    - ".cab"
+  # 代码文件不入库(属于软件范畴)
+  code_exts: [".java", ".py", ".js", ".cpp", ".h", ".sh", ".xml", ".yml", ".ini", ".properties", ".conf", ".css", ".html"]
+  # 以下路径相对于项目根目录(自动解析)
+  chroma_dir: "data/chroma"
+  sqlite_path: "data/chunks.db"
+  ocr_cache_dir: "data/ocr_cache"
+  bm25_cache: "data/bm25.pkl"
+
+embedding:
+  model_name: "BAAI/bge-small-zh-v1.5"   # 中文短文本效果好、体积小
+  device: "cpu"
+  normalize_embeddings: true
+  hf_mirror: "https://hf-mirror.com"      # 国内镜像, 留空则用官方源
+
+rerank:
+  model_name: "BAAI/bge-reranker-base"    # 交叉编码器重排序
+  device: "cpu"
+  rerank_candidates: 25    # 融合后送入重排的候选数
+  final_k: 6               # 最终交给 LLM 的片段数
+  grade_threshold: 0.05    # 重排分数相关性筛选阈值(低于此分视为不相关)
+
+retrieval:
+  chunk_size: 600          # 字符数
+  chunk_overlap: 100
+  bm25_topk: 30
+  vector_topk: 30
+  rrf_k: 60                # RRF 常数(保留, 当前用加权融合)
+  bm25_weight: 0.5         # 融合加权: BM25 权重
+  vector_weight: 0.5       # 融合加权: 向量权重
+
+llm:
+  # OpenAI 兼容接口: 可换成 DeepSeek / 通义千问 / 本地 Ollama 等
+  api_base: "https://api.openai.com/v1"
+  api_key: ""              # 建议放 .env 的 LLM_API_KEY, 不写死在此
+  model: "gpt-4o-mini"
+  temperature: 0.1
+  max_tokens: 1600
+  use_llm: true            # false 时仅返回检索片段, 不调用大模型
+  system_prompt: |
+    你是一个公司制度与项目资料问答助手。请严格基于【参考资料】中的内容用简体中文回答用户问题。
+    要求:
+    1. 只使用参考资料中的事实, 不要编造;
+    2. 在答案中以 [1]、[2] 形式标注引用来源的文件名;
+    3. 如果参考资料不足以回答, 明确说明"资料中未找到相关信息", 不要猜测;
+    4. 回答要条理清晰, 必要时用分点。
+
+server:
+  host: "0.0.0.0"          # 0.0.0.0 = 局域网内同事可访问
+  port: 8501
+
+observability:
+  # 生产级可观测: 是否对"线上真实问答"自动做 LLM 忠实度自评(会多一次大模型调用)
+  live_judge: false        # 默认关闭, 避免线上额外开销; 想看在线质量可开 true
+  keep_traces: 300         # 内存保留最近多少条运行记录

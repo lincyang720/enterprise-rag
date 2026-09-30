@@ -1,0 +1,38 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ===== 虚拟环境 / 依赖 =====
+node_modules/
+
+# ===== 索引与数据(含公司私有文档, 切勿入库) =====
+data/
+*.db
+*.sqlite
+*.pkl
+
+# ===== 模型缓存(HuggingFace, 体积大) =====
+.hf_cache/
+models/
+
+# ===== 日志 =====
+logs/
+*.log
+
+# ===== 本地配置与密钥(含本机资料路径 / API Key) =====
+config.yaml
+.env
+
+# ===== IDE / 系统 =====
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ===== 评测产物(可选, 如需分享可去掉注释) =====
+# data/eval_history.json
+# data/traces.jsonl
